@@ -1,153 +1,189 @@
-// controler for enching a resume professional summary
-// POST : / api/ai/enhance-pro-sum
-
 
 import Resume from "../models/Resume.js";
-import ai from "../configs/ai.js"
+import ai from "../configs/ai.js";
 
 export const enhanceProsessionSummary = async (req, res) => {
   try {
-    const { userContent } = req.body;
+    const { userContent } = req.body || {};
+
     if (!userContent) {
-      return res.status(400).json({ message: "Missing require field" });
+      return res.status(400).json({
+        message: "Missing required field",
+      });
     }
 
-    const response = await ai.chat.completions.create({
-      model: process.env.OPENAI_MODEL,
-      messages: [
-        {
-          role: "system",
-          content:
-            "you are an expert in resume writing. Your task is to enhance the professional summary of a resume. the summary should be 1-2 sentence also highlighting key skills, experience , and career objectives. Make it complelling and ATS-friendlly and only return text no options or anything else !",
-        },
-        {
-          role: "user",
-          content: userContent,
-        },
-      ],
+    const response = await ai.models.generateContent({
+      model: "gemini-3.8-flash",
+      contents: `
+You are an expert resume writer.
+
+Enhance the following professional summary.
+
+Requirements:
+- Make it professional
+- Make it ATS-friendly
+- Highlight key skills, experience, and career objectives
+- Keep it concise
+- Write only 1-2 sentences
+- Do not add fake information
+- Return only the final improved summary
+
+Professional Summary:
+${userContent}
+`,
     });
-    const enhancedContent = response.choices[0].message.content;
-    return res.status(200).json({ enhancedContent });
+
+    const enhancedContent = response.text;
+
+    return res.status(200).json({
+      enhancedContent,
+    });
   } catch (error) {
-    return res.status(400).json({ message: error.message });
+    console.error("AI ERROR:", error);
+
+    return res.status(500).json({
+      message: error.message,
+    });
   }
 };
-
-
-// controler for enching a resume job description
-// POST : / apo/ai/enhance-job-desc
 
 export const enhanceJobDescription = async (req, res) => {
   try {
-    const { userContent } = req.body;
+    const { userContent } = req.body || {};
+
     if (!userContent) {
-      return res.status(400).json({ message: "Missing require field" });
+      return res.status(400).json({
+        message: "Missing required field",
+      });
     }
 
-    const response = await ai.chat.completions.create({
-      model: process.env.OPENAI_MODEL,
-      messages: [
-        {
-          role: "system",
-          content:
-            "You are an expert in resume writing. Your task is to enhance the job description of a resume. The job description should be only in 1-2 sentence also highlighting key responsibilities and achievements. Use action verbs and quantifiable results where possible. Make it ATS-friendly. and only return text no options or anything else.",
-        },
-        {
-          role: "user",
-          content: userContent,
-        },
-      ],
+    const response = await ai.models.generateContent({
+      model: "gemini-3.8-flash",
+      contents: `
+You are an expert resume writer.
+
+Enhance the following job description.
+
+Requirements:
+- Make it professional
+- Make it ATS-friendly
+- Highlight key responsibilities and achievements
+- Use strong action verbs
+- Use quantifiable results where possible
+- Keep it concise
+- Write only 1-2 sentences
+- Do not add fake information
+- Return only the final improved job description
+
+Job Description:
+${userContent}
+`,
     });
-    const enhancedContent = response.choices[0].message.content;
-    return res.status(200).json({ enhancedContent });
+
+    const enhancedContent = response.text;
+
+    return res.status(200).json({
+      enhancedContent,
+    });
   } catch (error) {
-    return res.status(400).json({ message: error.message });
+    console.error("AI ERROR:", error);
+
+    return res.status(500).json({
+      message: error.message,
+    });
   }
 };
 
-//controller for uploading a resume to a database
-//POST : /api/ai/uploade-resume
 export const upLoadResume = async (req, res) => {
   try {
-    const { resumeText, title } = req.body;
+    const { resumeText, title } = req.body || {};
     const userId = req.userId;
 
     if (!resumeText) {
-      return res.status(400).json({ message: "Missing require field" });
+      return res.status(400).json({
+        message: "Missing required field",
+      });
     }
 
-    const systemPrompt =
-      "You are an expert AI Agent to extract data from resume. ";
+    const prompt = `
+Extract structured information from the following resume.
 
-    const userPrompt = `extract data from this resume: ${resumeText} provide data in the follwing JSON formate with no additional text before or after:
+Return ONLY valid JSON.
+Do not include markdown or any explanation.
+
+Resume:
+${resumeText}
+
+Return exactly this JSON structure:
+
+{
+  "professional_summary": "",
+  "skills": [],
+  "personal_info": {
+    "image": "",
+    "full_name": "",
+    "profession": "",
+    "email": "",
+    "phone": "",
+    "location": "",
+    "linkedin": "",
+    "website": ""
+  },
+  "experience": [
     {
-        professional_summary : {type : String, default:""},
-    skills: [{type:String}],
-    personal_info:{
-        image : {type : String, default:''},
-        full_name : {type : String, default:''},
-        profession : {type : String, default:''},
-        email : {type : String, default:''},
-        phone : {type : String, default:''},
-        location : {type : String, default:''},
-        linkedin : {type : String, default:''},
-        website : {type : String, default:''},
-    },
-    experience : [
-        {
-            company : {type : String},
-            position : {type : String},
-            start_date : {type : String},
-            end_date : {type : String},
-            description : {type : String},
-            is_current : {type : Boolean},
-          
-        }
-    ],
-    projects : [
-        {
-            name : {type : String},
-            type : {type : String},          
-            description : {type : String},
-          
-        }
-    ],
-    education : [
-        {
-            institution : {type : String},
-            degree : {type : String},
-            field : {type : String},
-            graduation_date : {type : String},
-            gpa : {type : String},
-            
-        }
-          
-    ],
+      "company": "",
+      "position": "",
+      "start_date": "",
+      "end_date": "",
+      "description": "",
+      "is_current": false
     }
+  ],
+  "projects": [
+    {
+      "name": "",
+      "type": "",
+      "description": ""
+    }
+  ],
+  "education": [
+    {
+      "institution": "",
+      "degree": "",
+      "field": "",
+      "graduation_date": "",
+      "gpa": ""
+    }
+  ]
+}
+`;
 
-
-    `;
-
-    const response = await ai.chat.completions.create({
-      model: process.env.OPENAI_MODEL,
-      messages: [
-        {
-          role: "system",
-          content: systemPrompt,
-        },
-        {
-          role: "user",
-          content: userPrompt,
-        },
-      ],
-      response_format: { type: "json_object" },
+    const response = await ai.models.generateContent({
+      model: "gemini-3.8-flash",
+      contents: prompt,
+      config: {
+        responseMimeType: "application/json",
+      },
     });
-    const extractedData = response.choices[0].message.content;
+
+    const extractedData = response.text;
 
     const parseData = JSON.parse(extractedData);
-    const newResume = await Resume.create({ userId, title, ...parseData });
-    return res.json({ resumeId: newResume._id });
+
+    const newResume = await Resume.create({
+      userId,
+      title,
+      ...parseData,
+    });
+
+    return res.status(200).json({
+      resumeId: newResume._id,
+    });
   } catch (error) {
-    return res.status(400).json({ message: error.message });
+    console.error("AI ERROR:", error);
+
+    return res.status(500).json({
+      message: error.message,
+    });
   }
 };

@@ -1,29 +1,25 @@
+
+
 import mongoose from "mongoose";
 
 const connectDB = async () => {
-    try{
-        mongoose.connection.on("connected", ()=>{
-            console.log("Database connected successfully")});
-            
-        
-        let mongodbURI = process.env.MONGODB_URL
-        const projectName = "resume-builder";
+    try {
+        const mongodbURI = process.env.MONGODB_URL;
 
-        if(!mongodbURI){
-            throw new Error ("MONGODB_URI environment variable not send")
+        if (!mongodbURI) {
+            throw new Error("MONGODB_URL environment variable is not defined");
         }
 
-        if(mongodbURI.endsWith('/')){
-            mongodbURI = mongodbURI.slice(0, -1)
-        }
+        await mongoose.connect(
+            `${mongodbURI}/resume-builder?retryWrites=true&w=majority`
+        );
 
-        // await mongoose.connect(`${mongodbURI}/${projectName}`)
-        await mongoose.connect(`${process.env.MONGODB_URL}/resume-builder?retryWrites=true&w=majority`);
+        console.log("Database connected successfully");
 
-    }catch(error){
-        console.error("Error connecting to MongoDB:", error )
-    };
-    
-}
+    } catch (error) {
+        console.error("Error connecting to MongoDB:", error.message);
+        process.exit(1);
+    }
+};
 
 export default connectDB;
